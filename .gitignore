@@ -1,0 +1,20 @@
+# Model weights (auto-downloaded / built)
+*.pt
+*.onnx
+*.engine
+models/
+
+# Python
+__pycache__/
+*.pyc
+.venv/
+venv/
+
+# Outputs (keep the benchmark JSON for the dashboard, ignore heavy media)
+output/*.mp4
+output/*.avi
+output/_*.txt
+
+# OS / editor
+.DS_Store
+.canvas_stage.tsx

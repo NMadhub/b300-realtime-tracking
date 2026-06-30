@@ -1,0 +1,15 @@
+# Tracking
+boxmot>=11.0.0          # ByteTrack, BoTSORT, OCSORT, DeepOCSORT, StrongSORT, BoostTrack
+
+# Detection (fallback backend) + I/O
+ultralytics>=8.2.0     # YOLO detector for the non-DeepStream path
+opencv-python>=4.9.0
+numpy>=1.24,<2.0
+
+# Optional: rigorous metrics (MOTA / IDF1 / HOTA)
+# Install separately when you have ground-truth labels:
+#   pip install trackeval
+#   git clone https://github.com/JonathonLuiten/TrackEval
+
+# NOTE: pyds + GStreamer NVIDIA plugins are NOT pip-installable here.
+# They come preinstalled in the DeepStream NGC container (see Dockerfile).

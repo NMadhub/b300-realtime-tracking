@@ -1,0 +1,52 @@
+{
+  "gpu_name": "NVIDIA B300 SXM6 AC",
+  "num_gpus": 8,
+  "mem_per_gpu_gb": 287.4,
+  "torch": "2.12.1+cu130",
+  "timestamp": "2026-06-30 22:07:29 UTC",
+  "tflops_single": 1510.5,
+  "tflops_aggregate": 12346.7,
+  "tflops_per_gpu": [
+    1519.7,
+    1573.9,
+    1570.9,
+    1507.5,
+    1514.1,
+    1555.8,
+    1532.3,
+    1572.4
+  ],
+  "pflops_aggregate": 12.35,
+  "detection": {
+    "imgsz": 640,
+    "by_batch": [
+      {
+        "batch": 1,
+        "fps": 239.1
+      },
+      {
+        "batch": 8,
+        "fps": 1280.4
+      },
+      {
+        "batch": 16,
+        "fps": 1650.0
+      },
+      {
+        "batch": 32,
+        "fps": 1917.4
+      },
+      {
+        "batch": 64,
+        "fps": 2043.1
+      }
+    ],
+    "peak_fps": 2043.1
+  },
+  "tracking": {
+    "objects_per_frame": 40,
+    "fps": 262.5
+  },
+  "realtime_streams_per_gpu": 68,
+  "realtime_streams_node": 544
+}

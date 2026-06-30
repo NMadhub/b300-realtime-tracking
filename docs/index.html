@@ -1,0 +1,262 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Real-Time Object Tracking on NVIDIA B300</title>
+<meta name="description" content="What a single NVIDIA B300 — and a full 8-GPU node — can do for live multi-object tracking, measured end to end on NVIDIA DeepStream 9.0." />
+<meta property="og:title" content="Real-time object tracking at datacenter scale — NVIDIA B300" />
+<meta property="og:description" content="One server. 544 live 1080p camera feeds. Tracked in real time. 12.35 PFLOPS across 8× B300." />
+<meta property="og:type" content="website" />
+<style>
+  :root {
+    --bg: #0a0a0b;
+    --panel: #131316;
+    --panel-2: #17171b;
+    --border: #26262c;
+    --border-soft: #1e1e23;
+    --text: #ededf0;
+    --text-2: #a2a2ad;
+    --text-3: #6c6c78;
+    --success: #3ecf8e;
+    --info: #5aa9ff;
+    --warning: #f0a93b;
+    --mono: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace;
+    --sans: Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; }
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--sans);
+    line-height: 1.5;
+    -webkit-font-smoothing: antialiased;
+  }
+  .wrap { max-width: 1080px; margin: 0 auto; padding: 48px 24px 64px; }
+  a { color: var(--info); text-decoration: none; }
+  a:hover { text-decoration: underline; }
+
+  header.hero { display: flex; align-items: flex-start; gap: 16px; flex-wrap: wrap; }
+  h1 { font-size: 30px; line-height: 1.2; margin: 0; letter-spacing: -0.02em; font-weight: 650; }
+  .sub { color: var(--text-2); font-size: 15px; margin: 10px 0 0; max-width: 720px; }
+  .badge {
+    margin-left: auto; flex-shrink: 0; font-family: var(--mono); font-size: 12px;
+    color: var(--text-2); border: 1px solid var(--border); border-radius: 999px;
+    padding: 6px 12px; white-space: nowrap; background: var(--panel);
+  }
+
+  section { margin-top: 40px; }
+  h2 { font-size: 18px; margin: 0 0 4px; font-weight: 600; letter-spacing: -0.01em; }
+  .axis-note { color: var(--text-2); font-size: 12.5px; margin: 0 0 14px; }
+  .caption { color: var(--text-3); font-size: 12px; margin-top: 10px; }
+
+  .stats { display: grid; grid-template-columns: repeat(4, 1fr); gap: 14px; margin-top: 28px; }
+  .stat { background: var(--panel); border: 1px solid var(--border-soft); border-radius: 12px; padding: 18px 16px; }
+  .stat .v { font-size: 30px; font-weight: 680; letter-spacing: -0.02em; font-variant-numeric: tabular-nums; }
+  .stat .l { color: var(--text-2); font-size: 12.5px; margin-top: 6px; }
+  .stat.success .v { color: var(--success); }
+  .stat.info .v { color: var(--info); }
+
+  .callout {
+    margin-top: 24px; border: 1px solid var(--border); border-left: 3px solid var(--info);
+    background: var(--panel); border-radius: 10px; padding: 16px 18px;
+  }
+  .callout.neutral { border-left-color: var(--border); }
+  .callout .t { font-weight: 650; margin-bottom: 4px; }
+  .callout b { color: var(--text); font-weight: 650; }
+  .callout p { margin: 0; color: var(--text-2); font-size: 14.5px; }
+
+  .two { display: grid; grid-template-columns: 1fr 1fr; gap: 28px; align-items: start; }
+
+  .chart { width: 100%; }
+  .chart svg { width: 100%; height: auto; display: block; }
+  .grid-line { stroke: var(--border-soft); stroke-width: 1; }
+  .axis-label { fill: var(--text-3); font-size: 11px; font-family: var(--mono); }
+  .val-label { fill: var(--text); font-size: 11px; font-family: var(--mono); font-variant-numeric: tabular-nums; }
+  .mean-line { stroke: var(--warning); stroke-width: 1.5; stroke-dasharray: 5 4; }
+  .mean-label { fill: var(--warning); font-size: 11px; font-family: var(--mono); }
+
+  .pipeline { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin: 6px 0 16px; }
+  .pill {
+    font-size: 12.5px; padding: 6px 12px; border-radius: 999px; background: var(--panel-2);
+    border: 1px solid var(--border); color: var(--text); white-space: nowrap;
+  }
+  .arrow { color: var(--text-3); }
+
+  table { width: 100%; border-collapse: collapse; font-size: 13.5px; }
+  .card { border: 1px solid var(--border); border-radius: 12px; overflow: hidden; }
+  .card .hd { padding: 10px 14px; font-size: 12px; color: var(--text-2); border-bottom: 1px solid var(--border-soft); display: flex; justify-content: space-between; }
+  td { padding: 9px 14px; border-bottom: 1px solid var(--border-soft); }
+  tr:last-child td { border-bottom: none; }
+  td.r { text-align: right; font-family: var(--mono); font-variant-numeric: tabular-nums; color: var(--text); }
+  td.k { color: var(--text-2); }
+  .tag { font-family: var(--mono); font-size: 11px; color: var(--text-3); }
+
+  .why h3 { font-size: 15px; margin: 0 0 8px; }
+  .why p { color: var(--text-2); font-size: 14px; margin: 0 0 12px; }
+
+  footer { margin-top: 48px; padding-top: 18px; border-top: 1px solid var(--border-soft); display: flex; gap: 12px; flex-wrap: wrap; }
+  footer span { color: var(--text-3); font-size: 12px; }
+  footer .right { margin-left: auto; }
+
+  @media (max-width: 760px) {
+    .stats { grid-template-columns: repeat(2, 1fr); }
+    .two { grid-template-columns: 1fr; }
+    h1 { font-size: 24px; }
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header class="hero">
+    <div>
+      <h1>Real-time object tracking at datacenter scale</h1>
+      <p class="sub">What a single NVIDIA B300 — and a full 8-GPU node — can do for live multi-object tracking, measured end to end on NVIDIA DeepStream 9.0.</p>
+    </div>
+    <div class="badge">8× NVIDIA B300 SXM6</div>
+  </header>
+
+  <div class="stats">
+    <div class="stat success"><div class="v">544</div><div class="l">1080p@30 streams tracked in real time (node)</div></div>
+    <div class="stat info"><div class="v">12.35 PF</div><div class="l">Sustained BF16 compute (8 GPUs)</div></div>
+    <div class="stat"><div class="v">2.0k</div><div class="l">People-detection FPS on one B300</div></div>
+    <div class="stat"><div class="v">287 GB</div><div class="l">HBM memory per GPU</div></div>
+  </div>
+
+  <div class="callout">
+    <div class="t">The headline</div>
+    <p>One B300 tracks <b>68 simultaneous 1080p video feeds</b> at a full 30&nbsp;fps. The 8-GPU node sustains <b>544 concurrent live streams</b> — roughly the camera count of an entire airport terminal, processed in real time on a single server.</p>
+  </div>
+
+  <section>
+    <h2>Concurrent live streams, tracked in real time</h2>
+    <p class="axis-note">Y axis: 1080p@30&nbsp;fps streams kept at real-time speed. Derived from measured detection throughput (peak 2,043&nbsp;fps ÷ 30&nbsp;fps per stream). Trackers run in parallel on CPU cores.</p>
+    <div class="chart" id="chart-streams"></div>
+    <p class="caption">Source: scripts/b300_showcase.py · DeepStream 9.0 · YOLOv8m FP16</p>
+  </section>
+
+  <section class="two">
+    <div>
+      <h2>Detection throughput vs. batch size</h2>
+      <p class="axis-note">X: inference batch size. Y: frames/sec (YOLOv8m, 640px, FP16) on one B300.</p>
+      <div class="chart" id="chart-detection"></div>
+      <p class="caption">8.5× throughput from batch 1 → 64 as the B300 fills its tensor cores.</p>
+    </div>
+    <div>
+      <h2>Compute: 8 GPUs, evenly matched</h2>
+      <p class="axis-note">X: GPU index. Y: sustained BF16 matmul throughput (TFLOPS). Dashed line = node mean.</p>
+      <div class="chart" id="chart-tflops"></div>
+      <p class="caption">Every GPU within ~2% of the mean — clean linear scaling to 12.35 PFLOPS.</p>
+    </div>
+  </section>
+
+  <section>
+    <h2>The measured pipeline</h2>
+    <div class="pipeline">
+      <span class="pill">GPU decode</span><span class="arrow">→</span>
+      <span class="pill">YOLOv8m detect</span><span class="arrow">→</span>
+      <span class="pill">multi-object tracker</span><span class="arrow">→</span>
+      <span class="pill">per-ID boxes</span>
+    </div>
+    <div class="two">
+      <div class="card">
+        <div class="hd"><span>Key results</span><span class="tag">measured</span></div>
+        <table>
+          <tr><td class="k">Single-GPU BF16 compute</td><td class="r">1.51 PFLOPS</td></tr>
+          <tr><td class="k">Aggregate compute (8 GPUs)</td><td class="r">12.35 PFLOPS</td></tr>
+          <tr><td class="k">Detection peak (1 B300, FP16)</td><td class="r">2,043 fps</td></tr>
+          <tr><td class="k">Tracking assoc. (ByteTrack, 40 obj)</td><td class="r">262.5 fps</td></tr>
+          <tr><td class="k">Real-time streams / GPU</td><td class="r">68</td></tr>
+          <tr><td class="k">Real-time streams / node</td><td class="r">544</td></tr>
+          <tr><td class="k">HBM per GPU</td><td class="r">287.4 GB</td></tr>
+        </table>
+      </div>
+      <div class="why">
+        <h3>Why it matters</h3>
+        <p>Smart-city, retail, and safety analytics are bottlenecked by how many camera feeds one box can watch at once. At 544 real-time feeds per node, a handful of B300 servers can cover deployments that previously needed a rack.</p>
+        <div class="callout neutral" style="margin-top:0">
+          <p>Headroom: detection used only a fraction of each GPU's 287&nbsp;GB. The same node can run far larger detectors, higher resolution, or add a VLM stage (NVIDIA VSS) for live scene summarization.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <footer>
+    <span>Hardware: 8× NVIDIA B300 SXM6 (287.4 GB). Stack: DeepStream 9.0 · PyTorch 2.12.1+cu130 · YOLOv8m · boxmot.</span>
+    <span class="right">Measured 2026-06-30 · reproducible via scripts/b300_showcase.py</span>
+  </footer>
+
+</div>
+
+<script>
+const COLORS = { success: "#3ecf8e", info: "#5aa9ff", warning: "#f0a93b", text3: "#6c6c78", grid: "#1e1e23" };
+const NS = "http://www.w3.org/2000/svg";
+function el(tag, attrs, text) {
+  const e = document.createElementNS(NS, tag);
+  for (const k in attrs) e.setAttribute(k, attrs[k]);
+  if (text != null) e.textContent = text;
+  return e;
+}
+function niceMax(v) { const p = Math.pow(10, Math.floor(Math.log10(v))); return Math.ceil(v / p) * p; }
+
+function barChart(id, { categories, values, color, suffix = "", mean = null, yMin = 0 }) {
+  const W = 520, H = 240, padL = 48, padR = 16, padT = 16, padB = 36;
+  const plotW = W - padL - padR, plotH = H - padT - padB;
+  const maxV = niceMax(Math.max(...values, mean || 0));
+  const minV = yMin;
+  const y = v => padT + plotH * (1 - (v - minV) / (maxV - minV));
+  const svg = el("svg", { viewBox: `0 0 ${W} ${H}`, preserveAspectRatio: "xMidYMid meet" });
+  for (let i = 0; i <= 4; i++) {
+    const gv = minV + (maxV - minV) * i / 4, gy = y(gv);
+    svg.appendChild(el("line", { x1: padL, y1: gy, x2: W - padR, y2: gy, class: "grid-line" }));
+    svg.appendChild(el("text", { x: padL - 8, y: gy + 3, "text-anchor": "end", class: "axis-label" }, Math.round(gv).toLocaleString()));
+  }
+  const n = values.length, slot = plotW / n, bw = Math.min(slot * 0.55, 90);
+  values.forEach((v, i) => {
+    const cx = padL + slot * (i + 0.5), top = y(v);
+    svg.appendChild(el("rect", { x: cx - bw / 2, y: top, width: bw, height: padT + plotH - top, rx: 4, fill: color }));
+    svg.appendChild(el("text", { x: cx, y: top - 7, "text-anchor": "middle", class: "val-label" }, v.toLocaleString() + suffix));
+    svg.appendChild(el("text", { x: cx, y: H - padB + 18, "text-anchor": "middle", class: "axis-label" }, categories[i]));
+  });
+  if (mean != null) {
+    const my = y(mean);
+    svg.appendChild(el("line", { x1: padL, y1: my, x2: W - padR, y2: my, class: "mean-line" }));
+    svg.appendChild(el("text", { x: W - padR, y: my - 6, "text-anchor": "end", class: "mean-label" }, "mean " + Math.round(mean).toLocaleString()));
+  }
+  document.getElementById(id).appendChild(svg);
+}
+
+function lineChart(id, { categories, values, color, suffix = "" }) {
+  const W = 520, H = 240, padL = 52, padR = 18, padT = 18, padB = 36;
+  const plotW = W - padL - padR, plotH = H - padT - padB;
+  const maxV = niceMax(Math.max(...values));
+  const x = i => padL + (categories.length === 1 ? plotW / 2 : plotW * i / (categories.length - 1));
+  const y = v => padT + plotH * (1 - v / maxV);
+  const svg = el("svg", { viewBox: `0 0 ${W} ${H}`, preserveAspectRatio: "xMidYMid meet" });
+  for (let i = 0; i <= 4; i++) {
+    const gv = maxV * i / 4, gy = y(gv);
+    svg.appendChild(el("line", { x1: padL, y1: gy, x2: W - padR, y2: gy, class: "grid-line" }));
+    svg.appendChild(el("text", { x: padL - 8, y: gy + 3, "text-anchor": "end", class: "axis-label" }, Math.round(gv).toLocaleString()));
+  }
+  let dPath = "", aPath = "";
+  values.forEach((v, i) => { const px = x(i), py = y(v); dPath += (i ? "L" : "M") + px + " " + py + " "; });
+  aPath = dPath + "L" + x(values.length - 1) + " " + (padT + plotH) + " L" + x(0) + " " + (padT + plotH) + " Z";
+  svg.appendChild(el("path", { d: aPath, fill: color, "fill-opacity": "0.12", stroke: "none" }));
+  svg.appendChild(el("path", { d: dPath, fill: "none", stroke: color, "stroke-width": "2" }));
+  values.forEach((v, i) => {
+    const px = x(i), py = y(v);
+    svg.appendChild(el("circle", { cx: px, cy: py, r: 3.5, fill: color }));
+    svg.appendChild(el("text", { x: px, y: py - 9, "text-anchor": "middle", class: "val-label" }, v.toLocaleString() + suffix));
+    svg.appendChild(el("text", { x: px, y: H - padB + 18, "text-anchor": "middle", class: "axis-label" }, categories[i]));
+  });
+  document.getElementById(id).appendChild(svg);
+}
+
+barChart("chart-streams", { categories: ["1× B300", "8× B300 node"], values: [68, 544], color: COLORS.success, suffix: "" });
+lineChart("chart-detection", { categories: ["1", "8", "16", "32", "64"], values: [239, 1280, 1650, 1917, 2043], color: COLORS.info, suffix: "" });
+barChart("chart-tflops", { categories: ["G0","G1","G2","G3","G4","G5","G6","G7"], values: [1520,1574,1571,1508,1514,1556,1532,1572], color: "#7a7a86", suffix: "", mean: 1543, yMin: 1400 });
+</script>
+</body>
+</html>
