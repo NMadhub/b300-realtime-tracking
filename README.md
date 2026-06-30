@@ -18,7 +18,7 @@ Measured highlights (single node, DeepStream 9.0, FP16):
 Reproduce with `python3 scripts/b300_showcase.py` inside the container; the
 dashboard in `docs/` reads the resulting `output/b300_results.json`.
 
-![reference layout](assets/reference.png)
+![reference layout](assets/IMG_7626.PNG)
 
 ## Why this design
 
